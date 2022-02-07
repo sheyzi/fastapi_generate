@@ -3,7 +3,7 @@ from decouple import config
 
 
 class Settings(BaseModel):
-    PROJECT_TITLE: str = 'Ecommerce API'
+    PROJECT_TITLE: str = 'FastAPI Auth'
     PROJECT_VERSION: str = '1.0.0'
 
     DETA_PROJECT_KEY: str = config("DETA_PROJECT_KEY")

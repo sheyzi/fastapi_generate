@@ -12,8 +12,10 @@ def create_user(user_details: UserCreate, db: Session):
     if old_user:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "User with this email already exists")
+    user_details_dict = user_details.dict()
+    del user_details_dict['password']
     new_user = User(
-        email=user_details.email,
+        **user_details_dict,
         password=auth.hash_password(user_details.password)
     )
     db.add(new_user)
