@@ -149,7 +149,7 @@ $ alembic upgrade head
 - Reflect changes in `schemas/users.py` file
 - Migrate database
 
-### How to make a route require authentication
+### How to use the authentication
 
 - Import the `get_active_users` dependency from the `core/dependency.py`
 
