@@ -104,3 +104,41 @@ python -m uvicorn main:app --reload
 ### Open api docs
 
 Navigate to [127.0.0.1:8000/docs]('http://127.0.0.1:8000/docs')
+
+### Add field to user model
+
+The template comes without a username field, I will show you how to add that now!
+
+- Edit the `models/users.py` to add the username field
+
+```python
+...
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, unique=True, index=True)
+    username = Column(String, nullable=False) # New
+
+...
+```
+
+- Reflect db changes on the pydantic schema in the `schemas/users.py`
+
+```python
+...
+
+class UserBase(BaseModel):
+    email: str
+    username: str #New
+
+...
+```
+
+- Migrate the database
+
+```bash
+$ alembic revision --autogenerate -m "Added username field to users"
+$ alembic upgrade head
+```
