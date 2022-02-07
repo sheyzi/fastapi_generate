@@ -142,3 +142,40 @@ class UserBase(BaseModel):
 $ alembic revision --autogenerate -m "Added username field to users"
 $ alembic upgrade head
 ```
+
+#### Steps to add field to the users db
+
+- Edit the `models/users.py` file
+- Reflect changes in `schemas/users.py` file
+- Migrate database
+
+### How to make a route require authentication
+
+- Import the `get_active_users` dependency from the `core/dependency.py`
+
+```python
+from core.dependency import get_active_user
+```
+
+- Import the `Depends` function from `fastapi`
+
+```python
+from fastapi import Depends
+```
+
+- Import the `UserOut` class from the `schemas/users.py`
+
+```python
+from schemas.users import UserOut
+```
+
+- Add the dependency to the route function
+
+```python
+...
+
+@auth_router.post("/some-route/")
+def register_user(current_user: UserOut = Depends(get_active_user)):
+
+...
+```
