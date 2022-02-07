@@ -179,3 +179,20 @@ def register_user(current_user: UserOut = Depends(get_active_user)):
 
 ...
 ```
+
+### How to create custom auth permissions
+
+In this section we will create a permission for only admins
+
+In `core/dependency.py` add
+
+```python
+...
+
+def get_admin_user(current_user: UserOut = Depends(get_active_user)):
+    if not current_user.is_admin:
+        raise HTTPException("Not an admin user!")
+    return current_user
+
+...
+```
