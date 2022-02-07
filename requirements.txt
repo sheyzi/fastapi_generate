@@ -1,0 +1,10 @@
+deta
+fastapi
+uvicorn
+pyjwt
+passlib[bcrypt]
+sqlalchemy
+psycopg2-binary
+alembic
+python-decouple
+python-slugify
