@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
-    email: str
+    email: EmailStr
 
 
 class UserCreate(UserBase):
@@ -11,6 +11,7 @@ class UserCreate(UserBase):
 
 class UserOut(UserBase):
     id: int
+    email_verified: bool
     is_active: bool
     is_admin: bool
 

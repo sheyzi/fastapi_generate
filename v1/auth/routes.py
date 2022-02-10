@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from core.dependency import get_db, get_active_user
 from schemas.users import UserCreate, UserOut
-from schemas.auth import RefreshDetails, Token, LoginDetails
+from schemas.auth import EmailSchema, RefreshDetails, Token, LoginDetails
 
 from . import views
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@auth_router.post("/register/", response_model=UserOut)
+@auth_router.post("/register/", response_model=UserOut, status_code=201)
 def register_user(user_details: UserCreate, db: Session = Depends(get_db)):
     user = views.create_user(user_details, db)
     return user
@@ -31,3 +31,8 @@ def refresh_token(token_details: RefreshDetails, db: Session = Depends(get_db)):
 @auth_router.get("/me/", response_model=UserOut)
 def get_user_profile(current_user: UserOut = Depends(get_active_user)):
     return current_user
+
+
+@auth_router.post("/test-mail/")
+def test_mail(background_tasks: BackgroundTasks, emails: EmailSchema):
+    return views.send_test_mail(background_tasks, emails)
