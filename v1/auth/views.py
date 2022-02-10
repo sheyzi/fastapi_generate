@@ -1,14 +1,21 @@
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy.orm import Session
 
 from core.auth import auth
+from core.mail import send_mail
 from models.users import User
 from schemas.users import UserCreate
-from schemas.auth import LoginDetails, RefreshDetails, Token
+from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema
+
+
+def get_user_by_email(email: str, db: Session):
+    user = db.query(User).filter(User.email == email).first()
+    return user
 
 
 def create_user(user_details: UserCreate, db: Session):
-    old_user = db.query(User).filter(User.email == user_details.email).first()
+    user_details.email = user_details.email.lower()
+    old_user = get_user_by_email(email=user_details.email, db=db)
     if old_user:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "User with this email already exists")
@@ -25,7 +32,8 @@ def create_user(user_details: UserCreate, db: Session):
 
 
 def login_user(user_details: LoginDetails, db: Session):
-    user = db.query(User).filter(User.email == user_details.email).first()
+    user_details.email = user_details.email.lower()
+    user = get_user_by_email(email=user_details.email, db=db)
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED,
                             "User with this email doesn't exist!")

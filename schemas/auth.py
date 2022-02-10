@@ -1,4 +1,10 @@
-from pydantic import BaseModel
+from typing import Any, Dict, List
+from pydantic import BaseModel, EmailStr
+
+
+class EmailSchema(BaseModel):
+    emails: List[EmailStr]
+    body: Dict[str, Any]
 
 
 class Token(BaseModel):

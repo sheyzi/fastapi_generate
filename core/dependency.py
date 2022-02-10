@@ -28,6 +28,8 @@ def get_user(credentials: HTTPAuthorizationCredentials = Security(security), db:
 
 
 def get_active_user(current_user: UserOut = Depends(get_user)):
+    if not current_user.email_verified:
+        raise HTTPException(401, "Email isn't verified!")
     if not current_user.is_active:
-        raise HTTPException("This account is inactive!")
+        raise HTTPException(401, "This account is inactive!")
     return current_user

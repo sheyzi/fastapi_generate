@@ -9,6 +9,12 @@ class Settings(BaseModel):
     DETA_PROJECT_KEY: str = config("DETA_PROJECT_KEY")
     DETA_PROJECT_ID: str = config("DETA_PROJECT_ID")
 
+    MAIL_USERNAME: str = config("MAIL_USERNAME")
+    MAIL_PASSWORD: str = config("MAIL_PASSWORD")
+    MAIL_FROM: str = config("MAIL_FROM")
+    MAIL_PORT: str = config("MAIL_PORT")
+    MAIL_SERVER: str = config("MAIL_SERVER")
+
     DATABASE_USER: str = config("POSTGRES_USER")
     DATABASE_PASSWORD: str = config("POSTGRES_PASSWORD")
     DATABASE_SERVER: str = config("POSTGRES_SERVER")
@@ -22,6 +28,8 @@ class Settings(BaseModel):
     # ACCESS_TOKEN_EXPIRY_SECONDS: int = 5
     ACCESS_TOKEN_EXPIRY_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRY_DAYS: int = 30
+
+    TEST_USER_EMAIL = "test@example.com"
 
 
 settings = Settings()
