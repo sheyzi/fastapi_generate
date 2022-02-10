@@ -50,9 +50,3 @@ def refresh_token(token_details: RefreshDetails, db: Session):
     new_access_token, new_refresh_token = auth.refresh_token(
         token_details.refresh_token)
     return Token(access_token=new_access_token, refresh_token=new_refresh_token, token_type="bearer")
-
-
-def send_test_mail(background_tasks: BackgroundTasks, emails: EmailSchema):
-    send_mail(background_tasks=background_tasks, subject="Test Mail",
-              emails=emails, template_name="test_email.html")
-    return {"msg": "Success"}

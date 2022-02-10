@@ -31,8 +31,3 @@ def refresh_token(token_details: RefreshDetails, db: Session = Depends(get_db)):
 @auth_router.get("/me/", response_model=UserOut)
 def get_user_profile(current_user: UserOut = Depends(get_active_user)):
     return current_user
-
-
-@auth_router.post("/test-mail/")
-def test_mail(background_tasks: BackgroundTasks, emails: EmailSchema):
-    return views.send_test_mail(background_tasks, emails)
