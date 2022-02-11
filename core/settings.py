@@ -25,11 +25,11 @@ class Settings(BaseModel):
     SECRET_KEY: str = config("SECRET")
     ALGORITHM = "HS256"
 
-    # ACCESS_TOKEN_EXPIRY_SECONDS: int = 5
     ACCESS_TOKEN_EXPIRY_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRY_DAYS: int = 30
+    EMAIL_TOKEN_EXPIRY_MINUTES: int = 30
 
-    TEST_USER_EMAIL = "test@example.com"
+    FRONTEND_URL: str = config("FRONTEND_URL", default=None)
 
 
 settings = Settings()

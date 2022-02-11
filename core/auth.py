@@ -9,6 +9,7 @@ from core.settings import settings
 deta = Deta(settings.DETA_PROJECT_KEY)
 
 banned_refresh_tokens = deta.Base("ban_refresh_token")
+banned_email_tokens = deta.Base("ban_email_tokens")
 
 
 class Auth():
@@ -76,13 +77,49 @@ class Auth():
                 new_refresh_token = self.encode_refresh_token(username)
                 return new_token, new_refresh_token
             raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail='Invalid scope for token')
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail='Refresh token expired')
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail='Invalid refresh token')
+
+    def encode_verification_token(self, username):
+        payload = {
+            'exp': datetime.utcnow() + timedelta(minutes=settings.EMAIL_TOKEN_EXPIRY_MINUTES),
+            'iat': datetime.utcnow(),
+            'scope': 'email_verification',
+            'sub': username
+        }
+        return jwt.encode(
+            payload,
+            self.secret,
+            algorithm=settings.ALGORITHM
+        )
+
+    def verify_email(self, token):
+        try:
+            payload = jwt.decode(
+                token,
+                self.secret,
+                algorithms=[settings.ALGORITHM]
+            )
+            if (payload['scope'] == 'email_verification'):
+                if banned_email_tokens.get(token) != None:
+                    raise HTTPException(
+                        status.HTTP_401_UNAUTHORIZED, detail="Email token has been used!")
+                banned_email_tokens.insert({"key": token})
+                username = payload['sub']
+                return username
+            raise HTTPException(
                 status_code=401, detail='Invalid scope for token')
         except jwt.ExpiredSignatureError:
             raise HTTPException(
-                status_code=401, detail='Refresh token expired')
+                status_code=status.HTTP_401_UNAUTHORIZED, detail='Email token expired')
         except jwt.InvalidTokenError:
             raise HTTPException(
-                status_code=401, detail='Invalid refresh token')
+                status_code=401, detail='Invalid email token')
 
 
 auth = Auth()

@@ -1,8 +1,9 @@
-from fastapi import BackgroundTasks, HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from core.auth import auth
 from core.mail import send_mail
+from core.settings import settings
 from models.users import User
 from schemas.users import UserCreate
 from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema
@@ -13,7 +14,24 @@ def get_user_by_email(email: str, db: Session):
     return user
 
 
-def create_user(user_details: UserCreate, db: Session):
+def generate_verification_email_link(request: Request, email):
+    email_token = auth.encode_verification_token(email)
+    base_url = request.base_url
+    frontend_url = settings.FRONTEND_URL
+    verification_link = f"{frontend_url or base_url}v1/auth/email-verify?token={email_token}"
+    return verification_link
+
+
+def send_verification_email(background_tasks: BackgroundTasks, email: str, request: Request):
+    verification_link = generate_verification_email_link(
+        request, email=email)
+    email = EmailSchema(emails=[email], body={
+                        "verification_link": verification_link, "company_name": settings.PROJECT_TITLE})
+    send_mail(background_tasks=background_tasks,
+              subject=f"{settings.PROJECT_TITLE} email confirmation", emails=email, template_name="email_verification.html")
+
+
+def create_user(user_details: UserCreate, db: Session, background_tasks: BackgroundTasks, request: Request):
     user_details.email = user_details.email.lower()
     old_user = get_user_by_email(email=user_details.email, db=db)
     if old_user:
@@ -26,12 +44,15 @@ def create_user(user_details: UserCreate, db: Session):
         password=auth.hash_password(user_details.password)
     )
     db.add(new_user)
+
+    send_verification_email(
+        background_tasks, email=user_details.email, request=request)
     db.commit()
     db.refresh(new_user)
     return new_user
 
 
-def login_user(user_details: LoginDetails, db: Session):
+def login_user(user_details: LoginDetails, db: Session, bg_tasks: BackgroundTasks, request: Request):
     user_details.email = user_details.email.lower()
     user = get_user_by_email(email=user_details.email, db=db)
     if not user:
@@ -40,6 +61,10 @@ def login_user(user_details: LoginDetails, db: Session):
     if not auth.verify_password(user_details.password, user.password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED,
                             "Incorrect password!")
+    if not user.email_verified:
+        send_verification_email(bg_tasks, user_details.email, request)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Email isn't verified. Check your mail for steps to get verified.")
 
     access_token = auth.encode_token(user.email)
     refresh_token = auth.encode_refresh_token(user.email)
@@ -50,3 +75,27 @@ def refresh_token(token_details: RefreshDetails, db: Session):
     new_access_token, new_refresh_token = auth.refresh_token(
         token_details.refresh_token)
     return Token(access_token=new_access_token, refresh_token=new_refresh_token, token_type="bearer")
+
+
+def verify_email(token: str, db: Session):
+    email = auth.verify_email(token)
+    user = get_user_by_email(email, db)
+    if not user:
+        raise HTTPException(401, "Invalid user... Please create an account")
+    if user.email_verified:
+        raise HTTPException(status.HTTP_304_NOT_MODIFIED,
+                            "User email already verified!")
+    user.email_verified = True
+    user.is_active = True
+    db.commit()
+    return {"msg": "Email verified successfully"}
+
+
+def resend_verification_email(email: str, bg_tasks: BackgroundTasks, request: Request, db: Session):
+    user = get_user_by_email(email, db)
+    if not user:
+        raise HTTPException(401, "User with this email doesn't exist!")
+    if user.email_verified:
+        raise HTTPException(400, "Email already verified!")
+    send_verification_email(bg_tasks, email, request)
+    return {"msg": "Verification mail has been resent!"}
