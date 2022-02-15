@@ -20,3 +20,9 @@ class LoginDetails(BaseModel):
 
 class RefreshDetails(BaseModel):
     refresh_token: str
+
+
+class ResetPasswordDetails(BaseModel):
+    email: str
+    password: str
+    re_password: str
