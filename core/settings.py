@@ -28,6 +28,7 @@ class Settings(BaseModel):
     ACCESS_TOKEN_EXPIRY_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRY_DAYS: int = 30
     EMAIL_TOKEN_EXPIRY_MINUTES: int = 30
+    RESET_TOKEN_EXPIRY_MINUTES: int = 30
 
     FRONTEND_URL: str = config("FRONTEND_URL", default=None)
 

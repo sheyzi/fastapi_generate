@@ -6,10 +6,11 @@ from core.mail import send_mail
 from core.settings import settings
 from models.users import User
 from schemas.users import UserCreate
-from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema
+from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema, ResetPasswordDetails
 
 
 def get_user_by_email(email: str, db: Session):
+    email = email.lower()
     user = db.query(User).filter(User.email == email).first()
     return user
 
@@ -26,9 +27,10 @@ def send_verification_email(background_tasks: BackgroundTasks, email: str, reque
     verification_link = generate_verification_email_link(
         request, email=email)
     email = EmailSchema(emails=[email], body={
-                        "verification_link": verification_link, "company_name": settings.PROJECT_TITLE})
+        "verification_link": verification_link, "company_name": settings.PROJECT_TITLE})
     send_mail(background_tasks=background_tasks,
-              subject=f"{settings.PROJECT_TITLE} email confirmation", emails=email, template_name="email_verification.html")
+              subject=f"{settings.PROJECT_TITLE} email confirmation", emails=email,
+              template_name="email_verification.html")
 
 
 def create_user(user_details: UserCreate, db: Session, background_tasks: BackgroundTasks, request: Request):
@@ -99,3 +101,44 @@ def resend_verification_email(email: str, bg_tasks: BackgroundTasks, request: Re
         raise HTTPException(400, "Email already verified!")
     send_verification_email(bg_tasks, email, request)
     return {"msg": "Verification mail has been resent!"}
+
+
+def reset_password(email: str, bg_tasks: BackgroundTasks, request: Request, db: Session):
+    user = get_user_by_email(email, db)
+    if not user:
+        raise HTTPException(404, "User account not found")
+    token = auth.encode_reset_token(email)
+    emails = EmailSchema(emails=[email, ], body={
+        "reset_link": f"{settings.FRONTEND_URL or request.base_url}reset-password-confirm?token={token}",
+        "company_name": settings.PROJECT_TITLE
+    })
+    send_mail(background_tasks=bg_tasks,
+              subject=f"{settings.PROJECT_TITLE} Password Reset",
+              emails=emails,
+              template_name="reset_password.html"
+              )
+    return True
+
+
+def reset_password_verification(body: ResetPasswordDetails, request: Request, bg_tasks: BackgroundTasks, db: Session):
+    email = auth.verify_reset_token(body.token)
+    user = get_user_by_email(email, db)
+    if body.password != body.re_password:
+        raise HTTPException(400, "Passwords aren't equal!")
+    if auth.verify_password(body.password, user.password):
+        raise HTTPException(400, "Cannot used same password as before!")
+    user.password = auth.hash_password(body.password)
+    db.commit()
+
+    token = auth.encode_refresh_token(user.email)
+    emails = EmailSchema(emails=[email, ], body={
+        "reset_link": f"{settings.FRONTEND_URL or request.base_url}reset-password-confirm?token={token}",
+        "company_name": settings.PROJECT_TITLE
+    })
+    send_mail(background_tasks=bg_tasks,
+              subject=f"{settings.PROJECT_TITLE} Password Reset",
+              emails=emails,
+              template_name="reset_password_confirmation.html"
+    )
+
+    return True

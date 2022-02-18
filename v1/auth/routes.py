@@ -1,9 +1,10 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
 from core.dependency import get_db, get_active_user
 from schemas.users import UserCreate, UserOut
-from schemas.auth import EmailSchema, RefreshDetails, Token, LoginDetails
+from schemas.auth import RefreshDetails, Token, LoginDetails, ResetPasswordDetails
 
 from . import views
 
@@ -11,7 +12,8 @@ auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @auth_router.post("/register/", response_model=UserOut, status_code=201)
-def register_user(request: Request, background_tasks: BackgroundTasks, user_details: UserCreate, db: Session = Depends(get_db)):
+def register_user(request: Request, background_tasks: BackgroundTasks, user_details: UserCreate,
+                  db: Session = Depends(get_db)):
     user = views.create_user(user_details, db, background_tasks, request)
     return user
 
@@ -42,8 +44,26 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     return response
 
 
-@auth_router.get("/email-verify-resend")
-def resend_verification_email(email: str, background_tasks: BackgroundTasks, requests: Request, db: Session = Depends(get_db)):
+@auth_router.get("/email-verify-resend/")
+def resend_verification_email(email: EmailStr, background_tasks: BackgroundTasks, requests: Request,
+                              db: Session = Depends(get_db)):
     response = views.resend_verification_email(
         email, background_tasks, requests, db)
     return response
+
+
+@auth_router.get("/reset-password/")
+def reset_password(email: EmailStr, bg_tasks: BackgroundTasks, requests: Request, db: Session = Depends(get_db)):
+    done = views.reset_password(email, bg_tasks, requests, db)
+    if not done:
+        raise HTTPException(500, "There was an error processing your request!")
+    return {"msg": "Reset email sent"}
+
+
+@auth_router.post("/reset-password-confirm/")
+def rest_password_confirm(body: ResetPasswordDetails, bg_tasks: BackgroundTasks, request: Request, db: Session = Depends(get_db) ):
+    done = views.reset_password_verification(body, request, bg_tasks, db)
+    if not done:
+        raise HTTPException(500, "There was an error processing your request!")
+    return {"msg": "Password reset successful"}
+

@@ -10,6 +10,7 @@ deta = Deta(settings.DETA_PROJECT_KEY)
 
 banned_refresh_tokens = deta.Base("ban_refresh_token")
 banned_email_tokens = deta.Base("ban_email_tokens")
+banned_reset_tokens = deta.Base("ban_reset_token")
 
 
 class Auth():
@@ -120,6 +121,42 @@ class Auth():
         except jwt.InvalidTokenError:
             raise HTTPException(
                 status_code=401, detail='Invalid email token')
+
+    def encode_reset_token(self, username):
+        payload = {
+            'exp': datetime.utcnow() + timedelta(minutes=settings.RESET_TOKEN_EXPIRY_MINUTES),
+            'iat': datetime.utcnow(),
+            'scope': 'reset_token',
+            'sub': username
+        }
+        return jwt.encode(
+            payload,
+            self.secret,
+            algorithm=settings.ALGORITHM
+        )
+
+    def verify_reset_token(self, token):
+        try:
+            payload = jwt.decode(
+                token,
+                self.secret,
+                algorithms=[settings.ALGORITHM]
+            )
+            if payload['scope'] == 'reset_token':
+                if banned_reset_tokens.get(token) is not None:
+                    raise HTTPException(
+                        status.HTTP_401_UNAUTHORIZED, detail="Reset token has been used!")
+                banned_reset_tokens.insert({"key": token})
+                username = payload['sub']
+                return username
+            raise HTTPException(
+                status_code=401, detail='Invalid scope for token')
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail='Reset token expired')
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=401, detail='Invalid reset token')
 
 
 auth = Auth()
