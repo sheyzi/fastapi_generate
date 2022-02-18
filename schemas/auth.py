@@ -23,6 +23,6 @@ class RefreshDetails(BaseModel):
 
 
 class ResetPasswordDetails(BaseModel):
-    email: str
+    token: str
     password: str
     re_password: str

@@ -61,5 +61,9 @@ def reset_password(email: EmailStr, bg_tasks: BackgroundTasks, requests: Request
 
 
 @auth_router.post("/reset-password-confirm/")
-def rest_password_confirm(body: ResetPasswordDetails, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    pass
+def rest_password_confirm(body: ResetPasswordDetails, bg_tasks: BackgroundTasks, request: Request, db: Session = Depends(get_db) ):
+    done = views.reset_password_verification(body, request, bg_tasks, db)
+    if not done:
+        raise HTTPException(500, "There was an error processing your request!")
+    return {"msg": "Password reset successful"}
+

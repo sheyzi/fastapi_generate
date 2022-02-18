@@ -6,7 +6,7 @@ from core.mail import send_mail
 from core.settings import settings
 from models.users import User
 from schemas.users import UserCreate
-from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema
+from schemas.auth import LoginDetails, RefreshDetails, Token, EmailSchema, ResetPasswordDetails
 
 
 def get_user_by_email(email: str, db: Session):
@@ -107,7 +107,7 @@ def reset_password(email: str, bg_tasks: BackgroundTasks, request: Request, db: 
     user = get_user_by_email(email, db)
     if not user:
         raise HTTPException(404, "User account not found")
-    token = auth.encode_refresh_token(email)
+    token = auth.encode_reset_token(email)
     emails = EmailSchema(emails=[email, ], body={
         "reset_link": f"{settings.FRONTEND_URL or request.base_url}reset-password-confirm?token={token}",
         "company_name": settings.PROJECT_TITLE
@@ -117,4 +117,28 @@ def reset_password(email: str, bg_tasks: BackgroundTasks, request: Request, db: 
               emails=emails,
               template_name="reset_password.html"
               )
+    return True
+
+
+def reset_password_verification(body: ResetPasswordDetails, request: Request, bg_tasks: BackgroundTasks, db: Session):
+    email = auth.verify_reset_token(body.token)
+    user = get_user_by_email(email, db)
+    if body.password != body.re_password:
+        raise HTTPException(400, "Passwords aren't equal!")
+    if auth.verify_password(body.password, user.password):
+        raise HTTPException(400, "Cannot used same password as before!")
+    user.password = auth.hash_password(body.password)
+    db.commit()
+
+    token = auth.encode_refresh_token(user.email)
+    emails = EmailSchema(emails=[email, ], body={
+        "reset_link": f"{settings.FRONTEND_URL or request.base_url}reset-password-confirm?token={token}",
+        "company_name": settings.PROJECT_TITLE
+    })
+    send_mail(background_tasks=bg_tasks,
+              subject=f"{settings.PROJECT_TITLE} Password Reset",
+              emails=emails,
+              template_name="reset_password_confirmation.html"
+    )
+
     return True
