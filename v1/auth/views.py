@@ -1,4 +1,4 @@
-from fastapi import BackgroundTasks, HTTPException, status, Request
+from fastapi import BackgroundTasks, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 
 from core.auth import auth
@@ -54,7 +54,7 @@ def create_user(user_details: UserCreate, db: Session, background_tasks: Backgro
     return new_user
 
 
-def login_user(user_details: LoginDetails, db: Session, bg_tasks: BackgroundTasks, request: Request):
+def login_user(user_details: LoginDetails, db: Session, bg_tasks: BackgroundTasks, request: Request, response: Response):
     user_details.email = user_details.email.lower()
     user = get_user_by_email(email=user_details.email, db=db)
     if not user:
@@ -70,13 +70,31 @@ def login_user(user_details: LoginDetails, db: Session, bg_tasks: BackgroundTask
 
     access_token = auth.encode_token(user.email)
     refresh_token = auth.encode_refresh_token(user.email)
-    return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+    response.set_cookie(key='refresh_token',
+                        value=refresh_token,
+                        httponly=True,
+                        secure=True,
+                        samesite='none'
+                        )
+    return Token(access_token=access_token, token_type="bearer")
 
 
-def refresh_token(token_details: RefreshDetails, db: Session):
+def refresh_token(response: Response, request: Request):
+    former_token = request.cookies.get('refresh_token')
     new_access_token, new_refresh_token = auth.refresh_token(
-        token_details.refresh_token)
-    return Token(access_token=new_access_token, refresh_token=new_refresh_token, token_type="bearer")
+        former_token)
+    response.set_cookie(key='refresh_token',
+                        value=new_refresh_token,
+                        httponly=True,
+                        secure=True,
+                        samesite='none'
+                        )
+    return Token(access_token=new_access_token, token_type="bearer")
+
+
+def logout_user(response: Response):
+    response.delete_cookie('refresh_token')
+    return {"msg": "Okay"}
 
 
 def verify_email(token: str, db: Session):

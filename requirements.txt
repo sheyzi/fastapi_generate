@@ -4,7 +4,7 @@ uvicorn
 pyjwt
 passlib[bcrypt]
 sqlalchemy
-psycopg2-binary
+psycopg2
 alembic
 python-decouple
 python-slugify

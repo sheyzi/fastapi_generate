@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException, Response
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
@@ -19,14 +19,19 @@ def register_user(request: Request, background_tasks: BackgroundTasks, user_deta
 
 
 @auth_router.post("/login/", response_model=Token)
-def login(*, user_details: LoginDetails, db: Session = Depends(get_db), bg_tasks: BackgroundTasks, request: Request):
-    token = views.login_user(user_details, db, bg_tasks, request)
+def login(*, user_details: LoginDetails, db: Session = Depends(get_db), bg_tasks: BackgroundTasks, request: Request, response: Response):
+    token = views.login_user(user_details, db, bg_tasks, request, response)
     return token
 
 
-@auth_router.post("/refresh/", response_model=Token)
-def refresh_token(token_details: RefreshDetails, db: Session = Depends(get_db)):
-    tokens = views.refresh_token(token_details, db)
+@auth_router.get("/logout/")
+def logout(response: Response):
+    return views.logout_user(response)
+
+
+@auth_router.get("/refresh/", response_model=Token)
+def refresh_token(*, db: Session = Depends(get_db), response: Response, request: Request):
+    tokens = views.refresh_token(response, request)
     return tokens
 
 
