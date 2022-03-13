@@ -12,3 +12,8 @@ class User(Base):
     email_verified = Column(Boolean, default=False)
     is_active = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+
+
+class Token(Base):
+    __tablename__ = "tokens"
+    id = Column(String, primary_key=True)

@@ -2,18 +2,17 @@ import jwt
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from deta import Deta
+from sqlalchemy.orm import Session
 
 from core.settings import settings
-
-deta = Deta(settings.DETA_PROJECT_KEY)
-
-banned_refresh_tokens = deta.Base("ban_refresh_token")
-banned_email_tokens = deta.Base("ban_email_tokens")
-banned_reset_tokens = deta.Base("ban_reset_token")
+from models.users import Token
+from .database import SessionLocal
 
 
-class Auth():
+db: Session = SessionLocal()
+
+
+class Auth:
     hasher = CryptContext(schemes=['bcrypt'])
     secret = settings.SECRET_KEY
 
@@ -39,7 +38,7 @@ class Auth():
     def decode_token(self, token):
         try:
             payload = jwt.decode(token, self.secret, algorithms=[
-                                 settings.ALGORITHM])
+                settings.ALGORITHM])
             if payload['scope'] == "access_token":
                 return payload['sub']
             raise HTTPException(401, detail="Scope for the token is invalid")
@@ -68,11 +67,13 @@ class Auth():
                 self.secret,
                 algorithms=[settings.ALGORITHM]
             )
-            if (payload['scope'] == 'refresh_token'):
-                if banned_refresh_tokens.get(refresh_token) != None:
+            if payload['scope'] == 'refresh_token':
+                if db.query(Token).get(refresh_token):
                     raise HTTPException(
                         status.HTTP_401_UNAUTHORIZED, detail="Banned refresh token")
-                banned_refresh_tokens.insert({"key": refresh_token})
+                tk_db = Token(id=refresh_token)
+                db.add(tk_db)
+                db.commit()
                 username = payload['sub']
                 new_token = self.encode_token(username)
                 new_refresh_token = self.encode_refresh_token(username)
@@ -106,11 +107,13 @@ class Auth():
                 self.secret,
                 algorithms=[settings.ALGORITHM]
             )
-            if (payload['scope'] == 'email_verification'):
-                if banned_email_tokens.get(token) != None:
+            if payload['scope'] == 'email_verification':
+                if db.query(Token).get(token):
                     raise HTTPException(
                         status.HTTP_401_UNAUTHORIZED, detail="Email token has been used!")
-                banned_email_tokens.insert({"key": token})
+                tk_db = Token(id=token)
+                db.add(tk_db)
+                db.commit()
                 username = payload['sub']
                 return username
             raise HTTPException(
@@ -143,10 +146,12 @@ class Auth():
                 algorithms=[settings.ALGORITHM]
             )
             if payload['scope'] == 'reset_token':
-                if banned_reset_tokens.get(token) is not None:
+                if db.query(Token).get(token):
                     raise HTTPException(
                         status.HTTP_401_UNAUTHORIZED, detail="Reset token has been used!")
-                banned_reset_tokens.insert({"key": token})
+                tk_db = Token(id=token)
+                db.add(tk_db)
+                db.commit()
                 username = payload['sub']
                 return username
             raise HTTPException(
