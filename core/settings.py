@@ -6,9 +6,6 @@ class Settings(BaseModel):
     PROJECT_TITLE: str = 'FastAPI Auth'
     PROJECT_VERSION: str = '1.0.0'
 
-    DETA_PROJECT_KEY: str = config("DETA_PROJECT_KEY")
-    DETA_PROJECT_ID: str = config("DETA_PROJECT_ID")
-
     MAIL_USERNAME: str = config("MAIL_USERNAME")
     MAIL_PASSWORD: str = config("MAIL_PASSWORD")
     MAIL_FROM: str = config("MAIL_FROM")
