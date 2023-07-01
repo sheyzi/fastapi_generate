@@ -1,0 +1,13 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5438,
+            "driver": "PostgreSQL",
+            "name": "FastAPI Generate",
+            "database": "app",
+            "username": "sheyzi"
+        }
+    ]
+}

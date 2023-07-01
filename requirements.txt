@@ -1,0 +1,8 @@
+fastapi==0.98.0
+uvicorn==0.22.0
+python-dotenv==1.0.0
+sqlalchemy==2.0.17
+psycopg2-binary==2.9.6
+alembic==1.11.1
+python-jose==3.3.0
+argon2-cffi==21.3.0
