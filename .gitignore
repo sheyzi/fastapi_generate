@@ -1,2 +1,5 @@
 /venv
 .env
+.vscode
+.idea
+/thunder-tests
